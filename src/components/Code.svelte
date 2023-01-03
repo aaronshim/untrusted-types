@@ -1,10 +1,11 @@
 <script lang="ts">
   import { Highlight } from 'svelte-highlight';
-  import { xml } from 'svelte-highlight/languages';
+  import { json, xml } from 'svelte-highlight/languages';
 
   export let code = '';
   export let inline = true;
   export let fullCode = '';
+  export let isJson = false;
 
   import { ExternalLinkIcon } from 'svelte-feather-icons';
 
@@ -31,7 +32,7 @@ https://github.com/metonym/svelte-highlight/issues/135
       <ExternalLinkIcon />
     </button>
   {/if}
-  <Highlight language={xml} {code} />
+  <Highlight language={isJson ? json : xml} {code} />
 </main>
 
 <style>

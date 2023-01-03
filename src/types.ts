@@ -7,6 +7,8 @@ export type SinkDetails = {
     stackId: string;
     input: string;
     important?: boolean;
+    domPurifyInput?: string;
+    sanitizerInput?: string;
 };
 
 export type Settings = {

@@ -36,6 +36,39 @@ export const injected = /*javascript*/ `
         return _open.apply(window, arguments);
     };
     const scopeId = Math.random().toString(36).substr(2, 2);
+    
+    function tryHTMLSanitization(input, type, sink) {
+        let domPurifyInput = null;
+        let sanitizerInput = null;
+        if (type !== "TrustedHTML") {
+            return {};
+        }
+
+        // Stall waiting for DOMPurify
+        let counter = 0;
+        while (typeof DOMPurify === 'undefined' && counter < Number.MAX_VALUE) {
+            counter++;
+        }
+        
+        // We considered using DOMPurify hooks to see what changed, but it's more complicated.
+        // let hookTriggered = 0;
+        // DOMPurify.addHook('afterSanitizeElements', (node, data, config) => {
+        //     hookTriggered++;
+        // });
+
+        // Try DOMPurify
+        const sanitized = DOMPurify.sanitize(input, {RETURN_TRUESTED_TYPES: true});
+        domPurifyInput = sanitized.toString();
+        
+        // Try native sanitizer.
+        const e = document.createElement('div');
+        if (e.setHTML) { // Sanitizer exists.
+            e.setHTML(input);
+            sanitizerInput = e.innerHTML.toString();
+        }
+        return {domPurifyInput, sanitizerInput};
+    }
+
     function log(input, type, sink) {
         // ignore new events if recording has been disabled
         if(!settings.recordingEnabled) return input;
@@ -79,7 +112,8 @@ export const injected = /*javascript*/ `
             ];
 
             openGroup();
-            sendMessage('sinkFound', { href: location.href, sink, input: inputLog, stack: errorStack, stackId });
+            let sanitizerOutput = tryHTMLSanitization(input, type, sink);
+            sendMessage('sinkFound', { href: location.href, sink, input: inputLog, stack: errorStack, stackId, ...sanitizerOutput});
             index++;
             console.trace(...args);
 
@@ -107,40 +141,17 @@ export const injected = /*javascript*/ `
             if (!ignored) {
                 openGroup();
                 console.trace('#' + stackId + ' ' + location.href + '\\n%c' + sink, 'background: #222; color: #bada55; font-size: 16px', '\\n' + inputLog);
-                sendMessage('sinkFound', { href: location.href, sink, input: inputLog, stack: errorStack, stackId });
+                let sanitizerOutput = tryHTMLSanitization(input, type, sink);
+                sendMessage('sinkFound', { href: location.href, sink, input: inputLog, stack: errorStack, stackId, ...sanitizerOutput});
                 index++;
             }
         }
         return input;
     }
-    window.htmlCount = 0;
-    window.htmlDoesntSanitizeCount = 0;
-    window.sanitizerDoesntSanitizeCount = 0;
-    function logHTML(input, type, sink) {
-        const sanitized = DOMPurify.sanitize(input, {RETURN_TRUESTED_TYPES: true});
-        if (sanitized.toString() !== input.toString()) {
-            window.htmlDoesntSanitizeCount++;
-            // console.log("Sanitized HTML: " + sanitized);
-            console.log(sanitized.toString().length + " (sanitized) vs " + input.toString().length + " (unsanitized)");
-            debugger;
-        }
-        const e = document.createElement('div');
-        if (e.setHTML) { // Sanitizer exists.
-            e.setHTML(input);
-            const chromeSanitized = e.innerHTML;
-            if (chromeSanitized.toString() !== input.toString()) {
-                window.sanitizerDoesntSanitizeCount++;
-            }
-        }
-        window.htmlCount++;
-        console.log(window['htmlCount'] + " TrustedHTML assignments, of which " + window['htmlDoesntSanitizeCount'] + " does not sanitize automatically by DOMPurify and " + window['sanitizerDoesntSanitizeCount'] + " does not sanitized by native sanitizer.");
-        log(input, type, sink);
-    }
-
     let trustedTypesEnabled;
     if (!trustedTypes.defaultPolicy) {
         trustedTypes.createPolicy('default', {
-            createHTML: logHTML,
+            createHTML: log,
             createScript: log,
             createScriptURL: log
         });

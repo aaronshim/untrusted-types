@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { SinkDetails } from '../types';
 
+  import { diffHtml, isEqual } from 'html-differ';
   import Code from './Code.svelte';
   export let show: boolean;
   export let sinkDetails: SinkDetails;
@@ -14,6 +15,15 @@
     document.body.removeChild(input);
     return result;
   };
+
+  const htmlDiffResult = (a: string, b: string) => {
+    if (isEqual(a, b)) {
+      return null;
+    }
+    const diff = diffHtml(a, b);
+    // Default pretty printing.
+    return JSON.stringify(diff.filter(x => x.added || x.removed), null, 2);
+  }
 
   export let maxCodeLength: number = 1024;
 
@@ -59,7 +69,49 @@
           }}>Show full code&hellip; ({sinkDetails.input.length})</button>
       {/if}
     {/if}
-  </section>
+    {#if sinkDetails.domPurifyInput !== undefined && sinkDetails.domPurifyInput !== null }
+      <p>DOMPurify: {!!!htmlDiffResult(sinkDetails.input, sinkDetails.domPurifyInput) ? "Same" : "NOT SAME"} ({sinkDetails.domPurifyInput.length} vs {sinkDetails.input.length})</p>
+      {#if htmlDiffResult(sinkDetails.input, sinkDetails.domPurifyInput)}
+        <Code
+          isJson
+          code={htmlDiffResult(sinkDetails.input, sinkDetails.domPurifyInput)}
+          fullCode={htmlDiffResult(sinkDetails.input, sinkDetails.domPurifyInput)}/>
+      {/if}
+      <Code
+        code={codeTruncated
+          ? sinkDetails.domPurifyInput.substring(0, maxCodeLength)
+          : sinkDetails.domPurifyInput}
+        fullCode={sinkDetails.domPurifyInput} />
+      {#if codeTruncated}
+        <button
+          class="textBtn"
+          on:click={() => {
+            codeTruncated = false;
+          }}>Show full code&hellip; ({sinkDetails.input.length})</button>
+      {/if} 
+    {/if}
+    {#if sinkDetails.sanitizerInput !== undefined && sinkDetails.sanitizerInput !== null }
+      <p>Sanitizer API: {!!!htmlDiffResult(sinkDetails.input, sinkDetails.sanitizerInput) ? "Same" : "NOT SAME"} ({sinkDetails.sanitizerInput.length} vs {sinkDetails.input.length})</p>
+      {#if htmlDiffResult(sinkDetails.input, sinkDetails.sanitizerInput)}
+        <Code
+          isJson
+          code={htmlDiffResult(sinkDetails.input, sinkDetails.sanitizerInput)}
+          fullCode={htmlDiffResult(sinkDetails.input, sinkDetails.sanitizerInput)}/>
+      {/if}
+      <Code
+        code={codeTruncated
+          ? sinkDetails.sanitizerInput.substring(0, maxCodeLength)
+          : sinkDetails.sanitizerInput}
+        fullCode={sinkDetails.sanitizerInput} />
+      {#if codeTruncated}
+        <button
+          class="textBtn"
+          on:click={() => {
+            codeTruncated = false;
+          }}>Show full code&hellip; ({sinkDetails.input.length})</button>
+      {/if}
+    {/if}
+</section>
 {/if}
 
 <style>
