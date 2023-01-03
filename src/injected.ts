@@ -113,11 +113,34 @@ export const injected = /*javascript*/ `
         }
         return input;
     }
+    window.htmlCount = 0;
+    window.htmlDoesntSanitizeCount = 0;
+    window.sanitizerDoesntSanitizeCount = 0;
+    function logHTML(input, type, sink) {
+        const sanitized = DOMPurify.sanitize(input, {RETURN_TRUESTED_TYPES: true});
+        if (sanitized.toString() !== input.toString()) {
+            window.htmlDoesntSanitizeCount++;
+            // console.log("Sanitized HTML: " + sanitized);
+            console.log(sanitized.toString().length + " (sanitized) vs " + input.toString().length + " (unsanitized)");
+            debugger;
+        }
+        const e = document.createElement('div');
+        if (e.setHTML) { // Sanitizer exists.
+            e.setHTML(input);
+            const chromeSanitized = e.innerHTML;
+            if (chromeSanitized.toString() !== input.toString()) {
+                window.sanitizerDoesntSanitizeCount++;
+            }
+        }
+        window.htmlCount++;
+        console.log(window['htmlCount'] + " TrustedHTML assignments, of which " + window['htmlDoesntSanitizeCount'] + " does not sanitize automatically by DOMPurify and " + window['sanitizerDoesntSanitizeCount'] + " does not sanitized by native sanitizer.");
+        log(input, type, sink);
+    }
 
     let trustedTypesEnabled;
     if (!trustedTypes.defaultPolicy) {
         trustedTypes.createPolicy('default', {
-            createHTML: log,
+            createHTML: logHTML,
             createScript: log,
             createScriptURL: log
         });

@@ -64,11 +64,14 @@ if (settings.recordingEnabled) {
     meta.httpEquiv = 'Content-Security-Policy';
     meta.content = "require-trusted-types-for 'script'";
 
+    const domPurify = document.createElement('script');
+    domPurify.src = "https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.1/purify.min.js";
     const script = document.createElement('script');
     script.innerHTML = injected;
 
     const head = document.createElement('head');
     head.appendChild(meta);
+    head.appendChild(domPurify);
     head.appendChild(script);
     document.documentElement.appendChild(head);
     head.remove();
