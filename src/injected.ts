@@ -38,27 +38,17 @@ export const injected = /*javascript*/ `
     const scopeId = Math.random().toString(36).substr(2, 2);
     
     function tryHTMLSanitization(input, type, sink) {
-        let domPurifyInput = null;
-        let sanitizerInput = null;
         if (type !== "TrustedHTML") {
             return {};
         }
-
-        // Stall waiting for DOMPurify
-        let counter = 0;
-        while (typeof DOMPurify === 'undefined' && counter < Number.MAX_VALUE) {
-            counter++;
-        }
-        
-        // We considered using DOMPurify hooks to see what changed, but it's more complicated.
-        // let hookTriggered = 0;
-        // DOMPurify.addHook('afterSanitizeElements', (node, data, config) => {
-        //     hookTriggered++;
-        // });
+        let domPurifyInput = null;
+        let sanitizerInput = null;
 
         // Try DOMPurify
-        const sanitized = DOMPurify.sanitize(input, {RETURN_TRUESTED_TYPES: true});
-        domPurifyInput = sanitized.toString();
+        if (typeof DOMPurify !== 'undefined') {
+            const sanitized = DOMPurify.sanitize(input, {RETURN_TRUESTED_TYPES: true});
+            domPurifyInput = sanitized.toString();
+        }
         
         // Try native sanitizer.
         const e = document.createElement('div');
@@ -66,6 +56,7 @@ export const injected = /*javascript*/ `
             e.setHTML(input);
             sanitizerInput = e.innerHTML.toString();
         }
+
         return {domPurifyInput, sanitizerInput};
     }
 
